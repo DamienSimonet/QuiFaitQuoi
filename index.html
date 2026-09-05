@@ -208,11 +208,11 @@ setTimeout(function () {
   <!-- ============ 7. RESULTATS ============ -->
   <section id="v-res" hidden>
     <p class="sub" style="margin-bottom:0">Groupe <span id="res-letter"></span></p>
-    <div class="big"><span id="res-pct">0</span> %</div>
+    <div class="big"><span id="res-pct">0</span></div>
     <p class="sub" id="res-rank"></p>
     <div class="card">
-      <p class="muted" style="margin:0"><span id="res-ok"></span> bonnes réponses sur <span id="res-ext"></span>
-        propositions à deviner. Les affirmations des membres de votre groupe ne comptent pas.</p>
+      <p class="muted" style="margin:0"><strong><span id="res-ok"></span> personnes identifiées</strong>
+        sur <span id="res-ext"></span>, dont <span id="res-extok"></span> hors de votre groupe.</p>
     </div>
     <h2>Le détail</h2>
     <div id="res-detail"></div>
@@ -516,17 +516,18 @@ function renderRes(){
   const ranked = rankGroups(groupsAll, deck);
   const mine = ranked.find(g => g.gid === myGroup.gid);
   $('res-letter').textContent = mine.letter || mine.gid;
-  $('res-pct').textContent = String(mine.pct).replace('.', ',');
+  $('res-pct').textContent = mine.totalOk + ' / ' + mine.total;
   $('res-rank').textContent = `${mine.rank}${mine.rank===1?'er':'e'} sur ${ranked.length} groupe${ranked.length>1?'s':''}`;
-  $('res-ok').textContent = mine.extOk;
-  $('res-ext').textContent = mine.ext;
+  $('res-ok').textContent = mine.totalOk;
+  $('res-ext').textContent = mine.total;
+  $('res-extok').textContent = mine.extOk;
 
   $('res-detail').innerHTML = mine.detail.map(d => {
     const truth = players[d.authorPid]?.name || '?';
     const given = d.ans ? (players[d.ans]?.name || '?') : '—';
-    const cls = d.own ? 'own' : (d.ok ? 'ok' : 'ko');
-    const label = d.own ? 'affirmation de votre groupe (non comptée)'
-                        : (d.ok ? 'trouvé' : `vous aviez dit : ${escapeHtml(given)}`);
+    const cls = d.ok ? 'ok' : 'ko';
+    const label = (d.ok ? 'trouvé' : `vous aviez dit : ${escapeHtml(given)}`)
+                + (d.own ? ' · de votre groupe' : '');
     return `<div class="res ${cls}">
       <div>${escapeHtml(claimOf(d.authorPid))}</div>
       <div class="l"><strong>${escapeHtml(truth)}</strong> — ${label}</div>

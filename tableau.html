@@ -57,7 +57,7 @@
   .rrow.first .pos{color:var(--amber)}
   .rrow .gl{font-size:clamp(22px,2.4vw,40px); font-weight:800; width:3ch}
   .rrow .sc{margin-left:auto; font-size:clamp(26px,3vw,52px); font-weight:900; letter-spacing:-.02em}
-  .rrow .det{color:var(--muted); font-size:clamp(13px,1.1vw,18px); width:12ch; text-align:right}
+  .rrow .det{color:var(--muted); font-size:clamp(13px,1.1vw,18px); width:17ch; text-align:right; white-space:nowrap}
   .rrow .mem{color:var(--muted); font-size:clamp(12px,1vw,16px); flex:1; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap}
 
@@ -153,10 +153,10 @@ setTimeout(function () {
 
 <!-- 3a. classement -->
 <div class="screen" id="s-rank">
-  <div class="head"><h1>Classement</h1>
-    <span class="sub">% de bonnes réponses sur les affirmations à deviner</span></div>
+  <div class="head"><h1>Combien de personnes avez-vous identifiées ?</h1>
+    <span class="sub">toutes les bonnes réponses comptent</span></div>
   <div class="rank" id="r-list"></div>
-  <div class="foot">Les affirmations des membres d'un groupe ne comptent pas dans son score : les groupes sont comparables quelle que soit leur taille.</div>
+  <div class="foot">Le but n'est pas de gagner : c'est de connaître le plus de monde possible. Le second chiffre indique les personnes identifiées en dehors de votre propre groupe.</div>
 </div>
 
 <!-- 3b. détail d'un groupe -->
@@ -273,8 +273,8 @@ function renderRank(){
       <div class="pos">${g.rank}</div>
       <div class="gl">${escapeHtml(g.letter||g.gid)}</div>
       <div class="mem">${(g.members||[]).map(id=>escapeHtml(nameOf(id))).join(' · ')}</div>
-      <div class="det">${g.extOk} / ${g.ext} trouvées</div>
-      <div class="sc">${String(g.pct).replace('.',',')} %</div>
+      <div class="det">dont ${g.extOk} hors du groupe</div>
+      <div class="sc">${g.totalOk}<span style="font-size:.45em;font-weight:700;color:var(--muted)"> / ${g.total}</span></div>
     </div>`).join('');
 }
 
@@ -283,14 +283,13 @@ function renderDetail(gid){
   const g = rankGroups(groups, deck).find(x => x.gid === gid);
   if (!g){ renderRank(); show('s-rank'); return; }
   $('d-letter').textContent = g.letter || g.gid;
-  $('d-sub').textContent = `${String(g.pct).replace('.',',')} % · ${g.extOk} bonnes réponses sur ${g.ext} · ${(g.members||[]).map(nameOf).join(', ')}`;
+  $('d-sub').textContent = `${g.totalOk} personnes identifiées sur ${g.total}, dont ${g.extOk} hors du groupe · ${(g.members||[]).map(nameOf).join(', ')}`;
   $('d-list').innerHTML = g.detail.map(d => {
-    const cls = d.own ? 'own' : (d.ok ? 'ok' : 'ko');
-    const who = d.own
-      ? `<b>${escapeHtml(nameOf(d.authorPid))}</b> — du groupe, non comptée`
-      : (d.ok
-        ? `<b>${escapeHtml(nameOf(d.authorPid))}</b> — trouvé`
-        : `<b>${escapeHtml(nameOf(d.authorPid))}</b> — dit : <span class="bad">${d.ans?escapeHtml(nameOf(d.ans)):'personne'}</span>`);
+    const cls = d.ok ? 'ok' : 'ko';
+    const mark = d.own ? ' · du groupe' : '';
+    const who = d.ok
+      ? `<b>${escapeHtml(nameOf(d.authorPid))}</b> — trouvé${mark}`
+      : `<b>${escapeHtml(nameOf(d.authorPid))}</b> — dit : <span class="bad">${d.ans?escapeHtml(nameOf(d.ans)):'personne'}</span>`;
     return `<div class="item ${cls}"><div class="c">${escapeHtml(claimOf(d.authorPid))}
       <span class="who">${who}</span></div></div>`;
   }).join('');

@@ -74,15 +74,18 @@ serveur.
 
 ## 3. Comment le score est calculé
 
-Chaque participant connaît sa propre affirmation : dans un groupe de 6, six réponses
-sont donc acquises d'avance, et huit dans un groupe de 8. Ces cartes-là **ne sont pas
-comptées**. Le score d'un groupe est le pourcentage de bonnes réponses sur les seules
-affirmations dont l'auteur n'est pas dans le groupe. Un groupe de 6 et un groupe de 9
-sont ainsi strictement comparables, et deux groupes au même pourcentage sont ex aequo.
+Le score d'un groupe est le **nombre de personnes correctement identifiées**, sur le
+total des affirmations. Toutes les bonnes réponses comptent, y compris les
+affirmations des membres du groupe : le but n'est pas de gagner, c'est de connaître
+le plus de monde possible — un groupe qui n'a identifié que les siens a tout de même
+identifié ces personnes-là.
+
+Un second chiffre indique combien de personnes ont été identifiées **en dehors** du
+groupe. C'est lui qui mesure l'effort de découverte, et sur lequel s'appuyer en
+débriefing : un groupe de huit démarre mécaniquement avec deux bonnes réponses de
+plus qu'un groupe de six.
 
 Une case laissée vide compte comme une erreur.
-
----
 
 ## 4. Points d'attention en salle
 

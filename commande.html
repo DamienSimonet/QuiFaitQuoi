@@ -182,7 +182,7 @@ setTimeout(function () {
       <h2>Écran projeté</h2>
       <div class="row" id="wall-buttons"></div>
       <h2 style="margin-top:18px">Classement</h2>
-      <table><thead><tr><th>#</th><th>Groupe</th><th>Score</th><th>Bonnes</th></tr></thead>
+      <table><thead><tr><th>#</th><th>Groupe</th><th>Identifiées</th><th>Hors groupe</th></tr></thead>
         <tbody id="tb-rank"></tbody></table>
     </div>
 
@@ -437,7 +437,7 @@ function render(){
     const ranked = rankGroups(groups, deck);
     $('tb-rank').innerHTML = ranked.map(g => `<tr>
       <td>${g.rank}</td><td><strong>${escapeHtml(g.letter||g.gid)}</strong></td>
-      <td><strong>${String(g.pct).replace('.',',')} %</strong></td>
+      <td><strong>${g.totalOk} / ${g.total}</strong></td>
       <td class="muted">${g.extOk} / ${g.ext}</td></tr>`).join('');
     const cur = session.wallView || 'classement';
     $('wall-buttons').innerHTML =

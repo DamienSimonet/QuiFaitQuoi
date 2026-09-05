@@ -128,11 +128,12 @@ export function makeGroups(playerIds, targetSize) {
 /* ---------------------------------------------------------------------
    Scores
    ---------------------------------------------------------------------
-   Chaque membre connaît sa propre proposition : ces cartes-là sont
-   « gratuites » et ne sont donc PAS comptées. Le score d'un groupe est
-   le pourcentage de bonnes réponses sur les seules propositions dont
-   l'auteur n'appartient pas au groupe. Un groupe de 8 et un groupe de 6
-   sont ainsi comparables.
+   TOUTES les bonnes réponses comptent, y compris les affirmations des
+   membres du groupe : le but du jeu est de connaître le plus de monde
+   possible, pas de gagner. Un groupe qui n'identifie que les siens a
+   quand même identifié ces personnes-là.
+   Le détail « hors du groupe » (ext / extOk) reste calculé : il sert
+   à l'écran des surprises et à nuancer le classement, sans le fonder.
    --------------------------------------------------------------------- */
 export function scoreGroup(group, deck) {
   const members = new Set(group.members || []);
@@ -147,20 +148,22 @@ export function scoreGroup(group, deck) {
     if (ans !== null) filled++;
     if (ok) totalOk++;
     if (!own) { ext++; if (ok) extOk++; }
-    detail.push({ i, authorPid, ans, ok, own, counted: !own });
+    detail.push({ i, authorPid, ans, ok, own, counted: true });
   });
 
   return {
     ...group,
-    ext, extOk, totalOk, filled,
-    pct: ext ? Math.round((extOk / ext) * 1000) / 10 : 0,
+    ext, extOk, totalOk, filled, total: deck.length,
+    // score principal : toutes les bonnes réponses
+    pct: deck.length ? Math.round((totalOk / deck.length) * 1000) / 10 : 0,
+    // indicateur secondaire : les personnes découvertes hors du groupe
+    pctExt: ext ? Math.round((extOk / ext) * 1000) / 10 : 0,
     detail
   };
 }
 
 export function rankGroups(groups, deck) {
-  // Le rang ne dépend QUE du pourcentage : départager deux groupes à égalité
-  // par leur nombre de bonnes réponses réintroduirait l'avantage de taille.
+  // Le rang ne dépend que du nombre total de bonnes réponses.
   const arr = groups
     .map(g => scoreGroup(g, deck))
     .sort((a, b) => b.pct - a.pct ||
