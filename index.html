@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Qui fait quoi ?</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --ink:#111827; --muted:#6b7280;
+    --line:#e5e7eb; --accent:#1d4ed8; --accent-soft:#eff4ff;
+    --ok:#047857; --ok-soft:#ecfdf5; --ko:#b91c1c; --ko-soft:#fef2f2;
+    --amber:#b45309; --amber-soft:#fffbeb;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{margin:0; background:var(--bg); color:var(--ink);
+       font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       padding-bottom:env(safe-area-inset-bottom)}
+  .wrap{max-width:560px; margin:0 auto; padding:16px 16px 120px}
+  h1{font-size:22px; margin:0 0 4px; letter-spacing:-.02em}
+  h2{font-size:17px; margin:24px 0 8px}
+  p.sub{color:var(--muted); margin:0 0 20px; font-size:14px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px}
+  label{display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:6px}
+  input[type=text], textarea{
+    width:100%; font:inherit; padding:13px 14px; border:1px solid var(--line);
+    border-radius:11px; background:#fff; color:var(--ink)}
+  input:focus, textarea:focus{outline:2px solid var(--accent); border-color:transparent}
+  textarea{min-height:110px; resize:none}
+  #code{font-size:30px; letter-spacing:.35em; text-align:center; text-transform:uppercase; font-weight:700}
+  button{font:inherit; cursor:pointer}
+  .btn{display:block; width:100%; padding:15px; border-radius:12px; border:0;
+       background:var(--accent); color:#fff; font-weight:600; font-size:16px}
+  .btn:disabled{background:#c7cbd3; color:#fff}
+  .btn.ghost{background:#fff; color:var(--accent); border:1px solid var(--line); font-weight:600}
+  .btn.warn{background:var(--amber)}
+  .namelist{display:flex; flex-direction:column; gap:8px; max-height:52vh; overflow:auto; margin:-4px 0 0}
+  .namebtn{text-align:left; padding:14px; border-radius:11px; border:1px solid var(--line);
+           background:#fff; font-size:16px; color:var(--ink)}
+  .namebtn:disabled{color:#9aa1ad; background:#f7f8fa}
+  .namebtn .tag{float:right; font-size:12px; color:var(--muted)}
+  .count{font-variant-numeric:tabular-nums}
+  .bar{height:8px; background:var(--line); border-radius:99px; overflow:hidden}
+  .bar>i{display:block; height:100%; background:var(--accent); border-radius:99px; transition:width .3s}
+  .big{font-size:44px; font-weight:800; letter-spacing:-.03em; margin:6px 0}
+  .muted{color:var(--muted); font-size:14px}
+  .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+  .chip{background:var(--accent-soft); color:var(--accent); border-radius:99px; padding:5px 11px; font-size:14px; font-weight:600}
+  .chip.me{background:var(--accent); color:#fff}
+
+  /* --- grille de jeu --- */
+  .sticky{position:sticky; top:0; z-index:5; background:var(--bg); padding:10px 0 8px; margin:-16px 0 8px}
+  .sticky .row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px}
+  .timer{font-variant-numeric:tabular-nums; font-weight:700; font-size:18px}
+  .timer.urgent{color:var(--ko)}
+  .prop{display:flex; gap:12px; align-items:flex-start; width:100%; text-align:left;
+        background:#fff; border:1px solid var(--line); border-radius:13px; padding:13px; margin-bottom:9px}
+  .prop.filled{border-color:#c6d4f7; background:#fbfcff}
+  .prop .num{flex:0 0 30px; height:30px; border-radius:8px; background:var(--accent-soft); color:var(--accent);
+             font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center}
+  .prop .txt{flex:1; font-size:15px}
+  .prop .who{display:block; margin-top:7px; font-size:14px; font-weight:600; color:var(--accent)}
+  .prop .who.empty{color:#9aa1ad; font-weight:500}
+  .flash{animation:flash 1.1s ease-out}
+  @keyframes flash{0%{background:#fff7d6}100%{background:#fff}}
+
+  /* --- feuille de noms --- */
+  .sheet{position:fixed; inset:0; z-index:50; display:none}
+  .sheet.open{display:block}
+  .sheet .veil{position:absolute; inset:0; background:rgba(17,24,39,.45)}
+  .sheet .panel{position:absolute; left:0; right:0; bottom:0; background:#fff;
+    border-radius:18px 18px 0 0; padding:14px 14px calc(14px + env(safe-area-inset-bottom));
+    max-height:86vh; display:flex; flex-direction:column}
+  .sheet h3{margin:2px 0 4px; font-size:16px}
+  .sheet .q{color:var(--muted); font-size:14px; margin:0 0 12px}
+  .sheet .list{overflow:auto; display:flex; flex-direction:column; gap:7px}
+
+  .bottom{position:fixed; left:0; right:0; bottom:0; z-index:20; background:rgba(244,245,247,.94);
+    backdrop-filter:blur(8px); border-top:1px solid var(--line);
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+  .bottom .inner{max-width:560px; margin:0 auto}
+
+  .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:96px; z-index:60;
+    background:#111827; color:#fff; padding:9px 15px; border-radius:99px; font-size:14px;
+    opacity:0; transition:opacity .25s; pointer-events:none; max-width:90%}
+  .toast.show{opacity:.95}
+
+  .res{border-left:4px solid var(--line); padding:9px 0 9px 12px; margin-bottom:10px}
+  .res.ok{border-color:var(--ok)} .res.ko{border-color:var(--ko)} .res.own{border-color:#d1d5db}
+  .res .l{font-size:13px; color:var(--muted)}
+  .banner{background:var(--amber-soft); border:1px solid #fde68a; color:var(--amber);
+          border-radius:11px; padding:11px 13px; font-size:14px; margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ 1. CONNEXION ============ -->
+  <section id="v-code">
+    <h1>Qui fait quoi ?</h1>
+    <p class="sub">Saisissez le code affiché à l'écran.</p>
+    <div class="card">
+      <label for="code">Code de session</label>
+      <input id="code" type="text" inputmode="latin" autocomplete="off" autocapitalize="characters"
+             maxlength="4" placeholder="ABCD">
+    </div>
+    <button class="btn" id="btn-code">Continuer</button>
+    <p class="muted" id="code-err" style="margin-top:12px"></p>
+  </section>
+
+  <!-- ============ 2. IDENTITE ============ -->
+  <section id="v-who" hidden>
+    <h1>Qui êtes-vous ?</h1>
+    <p class="sub">Touchez votre nom dans la liste.</p>
+    <div class="card">
+      <div class="namelist" id="roster"></div>
+    </div>
+    <button class="btn ghost" id="btn-notlisted">Je ne suis pas dans la liste</button>
+    <div id="freeform" hidden style="margin-top:12px">
+      <div class="card">
+        <label for="myname">Prénom et nom</label>
+        <input id="myname" type="text" autocomplete="name" placeholder="Camille Durand">
+      </div>
+      <button class="btn" id="btn-join">C'est moi</button>
+    </div>
+  </section>
+
+  <!-- ============ 3. SAISIE DE L'AFFIRMATION ============ -->
+  <section id="v-claim" hidden>
+    <h1>Une chose que personne ne sait</h1>
+    <p class="sub">Une phrase vraie sur vous, que vos collègues ignorent. Ni votre nom, ni indice trop direct.</p>
+    <div class="card">
+      <label for="claim">Votre affirmation</label>
+      <textarea id="claim" maxlength="140" placeholder="J'ai traversé la Manche à la nage."></textarea>
+      <p class="muted" style="margin:8px 0 0"><span id="claim-left">140</span> caractères restants</p>
+    </div>
+    <button class="btn" id="btn-claim">Envoyer</button>
+  </section>
+
+  <!-- ============ 4. ATTENTE ============ -->
+  <section id="v-wait" hidden>
+    <h1>C'est enregistré</h1>
+    <p class="sub">Votre affirmation :</p>
+    <div class="card" id="wait-claim" style="font-size:17px"></div>
+    <button class="btn ghost" id="btn-edit">Modifier</button>
+    <div class="card" style="margin-top:20px">
+      <p class="muted" style="margin:0 0 8px"><span id="wait-count" class="count">0</span> réponses reçues</p>
+      <div class="bar"><i id="wait-bar" style="width:0%"></i></div>
+    </div>
+    <p class="muted">On attend les derniers, puis l'animateur formera les groupes.</p>
+  </section>
+
+  <!-- ============ 5. ANNONCE DU GROUPE ============ -->
+  <section id="v-group" hidden>
+    <p class="sub" style="margin-bottom:0">Votre groupe</p>
+    <div class="big" id="group-letter">A</div>
+    <p class="sub">Rejoignez la table de votre groupe.</p>
+    <div class="card">
+      <div class="chips" id="group-members"></div>
+    </div>
+    <button class="btn" id="btn-goplay">Commencer</button>
+  </section>
+
+  <!-- ============ 6. JEU ============ -->
+  <section id="v-play" hidden>
+    <div class="sticky">
+      <div class="row">
+        <div><strong>Groupe <span id="play-letter"></span></strong>
+          <span class="muted"> · <span id="play-count" class="count">0/0</span> placées</span></div>
+        <div class="timer" id="play-timer"></div>
+      </div>
+      <div class="bar"><i id="play-bar" style="width:0%"></i></div>
+    </div>
+    <div id="locked-banner" class="banner" hidden>Réponse validée. En attente des autres groupes.</div>
+    <div id="props"></div>
+  </section>
+
+  <!-- ============ 7. RESULTATS ============ -->
+  <section id="v-res" hidden>
+    <p class="sub" style="margin-bottom:0">Groupe <span id="res-letter"></span></p>
+    <div class="big"><span id="res-pct">0</span> %</div>
+    <p class="sub" id="res-rank"></p>
+    <div class="card">
+      <p class="muted" style="margin:0"><span id="res-ok"></span> bonnes réponses sur <span id="res-ext"></span>
+        propositions à deviner. Les affirmations des membres de votre groupe ne comptent pas.</p>
+    </div>
+    <h2>Le détail</h2>
+    <div id="res-detail"></div>
+  </section>
+</div>
+
+<!-- feuille de sélection des noms -->
+<div class="sheet" id="sheet">
+  <div class="veil" id="sheet-veil"></div>
+  <div class="panel">
+    <h3>À qui attribuez-vous cette affirmation ?</h3>
+    <p class="q" id="sheet-q"></p>
+    <div class="list" id="sheet-list"></div>
+    <button class="btn ghost" id="sheet-clear" style="margin-top:10px">Laisser vide</button>
+  </div>
+</div>
+
+<div class="bottom" id="bottom" hidden><div class="inner">
+  <button class="btn" id="btn-validate">Valider la réponse du groupe</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import {
+  sessionRef, playersCol, playerRef, groupsCol, groupRef,
+  onSnapshot, setDoc, updateDoc, getDoc, getDocs, deleteField,
+  escapeHtml, newId, fmtTime, normName, MAX_CLAIM, rankGroups
+} from './qfq-common.js';
+
+const $ = id => document.getElementById(id);
+const views = ['v-code','v-who','v-claim','v-wait','v-group','v-play','v-res'];
+function show(v){ views.forEach(x => $(x).hidden = (x !== v)); window.scrollTo(0,0); }
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2400); }
+
+let CODE = null, PID = null, ME = null;
+let session = null, players = {}, myGroup = null, groupsAll = [];
+let unsub = [], lastAnswers = {}, seenGroupAnnounce = false, editing = false;
+
+/* ---------- démarrage : code dans l'URL ou dans le téléphone ---------- */
+const urlCode = (new URLSearchParams(location.search).get('s') || '').toUpperCase();
+const savedCode = localStorage.getItem('qfq:lastcode');
+if (urlCode) { $('code').value = urlCode; }
+else if (savedCode) { $('code').value = savedCode; }
+show('v-code');
+if (urlCode) enterCode(urlCode);   // le QR code mène directement à la session
+
+$('btn-code').onclick = () => enterCode(($('code').value || '').toUpperCase().trim());
+$('code').addEventListener('input', e => {
+  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g,'');
+  if (e.target.value.length === 4) $('btn-code').focus();
+});
+
+async function enterCode(code){
+  $('code-err').textContent = '';
+  if (!/^[A-Z]{4}$/.test(code)) { $('code-err').textContent = 'Le code comporte 4 lettres.'; return; }
+  let snap;
+  try { snap = await getDoc(sessionRef(code)); }
+  catch(e){ $('code-err').textContent = 'Connexion impossible. Vérifiez le réseau.'; return; }
+  if (!snap.exists()) { $('code-err').textContent = "Aucune session avec ce code."; return; }
+  CODE = code;
+  localStorage.setItem('qfq:lastcode', code);
+  PID = localStorage.getItem('qfq:' + code);
+  listen();
+}
+
+/* ---------- écoutes temps réel ---------- */
+function listen(){
+  unsub.forEach(u => u()); unsub = [];
+  unsub.push(onSnapshot(sessionRef(CODE), s => { session = s.data() || null; render(); }));
+  unsub.push(onSnapshot(playersCol(CODE), s => {
+    players = {}; s.forEach(d => players[d.id] = { id: d.id, ...d.data() });
+    ME = PID ? players[PID] : null;
+    if (PID && !ME) { localStorage.removeItem('qfq:' + CODE); PID = null; }
+    render();
+  }));
+  unsub.push(onSnapshot(groupsCol(CODE), s => {
+    groupsAll = []; s.forEach(d => groupsAll.push({ gid: d.id, ...d.data() }));
+    const mine = groupsAll.find(g => (g.members || []).includes(PID)) || null;
+    const prev = myGroup;
+    myGroup = mine;
+    if (mine && prev && prev.gid === mine.gid) diffAnswers(prev.answers || {}, mine.answers || {});
+    lastAnswers = mine ? { ...(mine.answers || {}) } : {};
+    render();
+  }));
+}
+
+let flashSet = new Set();
+function diffAnswers(before, after){
+  const deck = session?.deck || [];
+  for (let i = 0; i < deck.length; i++){
+    const k = String(i);
+    if (before[k] !== after[k] && myGroup?.lastBy && myGroup.lastBy !== ME?.name){
+      const who = after[k] ? (players[after[k]]?.name || '?') : 'personne';
+      toast(`${myGroup.lastBy} : n°${i+1} → ${who}`);
+      flashSet.add(i);   // appliqué après le rendu, sinon l'animation est effacée
+    }
+  }
+}
+
+/* ---------- identité ---------- */
+function renderRoster(){
+  const taken = new Set(Object.values(players).map(p => normName(p.name)));
+  const list = (session?.roster || []).filter(n => n && n.trim());
+  const box = $('roster');
+  if (!list.length){
+    box.innerHTML = '<p class="muted" style="margin:0">Aucune liste chargée — utilisez le bouton ci-dessous.</p>';
+    $('freeform').hidden = false;
+    return;
+  }
+  box.innerHTML = list.map(n => {
+    const t = taken.has(normName(n));
+    return `<button class="namebtn" data-n="${escapeHtml(n)}" ${t?'disabled':''}>${escapeHtml(n)}${t?'<span class="tag">déjà connecté</span>':''}</button>`;
+  }).join('');
+  box.querySelectorAll('button[data-n]').forEach(b => b.onclick = () => join(b.dataset.n));
+}
+$('btn-notlisted').onclick = () => { $('freeform').hidden = false; $('myname').focus(); };
+$('btn-join').onclick = () => join(($('myname').value || '').trim());
+
+async function join(name){
+  if (!name || name.length < 2) { toast('Indiquez votre nom.'); return; }
+  if (Object.values(players).some(p => normName(p.name) === normName(name))){
+    toast('Ce nom est déjà connecté.'); return;
+  }
+  const pid = newId();
+  const me = { id: pid, name, claim: '', group: '', joinedAt: Date.now() };
+  await setDoc(playerRef(CODE, pid), { name, claim: '', group: '', joinedAt: Date.now() });
+  // on renseigne l'état local sans attendre le retour du serveur : sinon, si
+  // plus personne ne se connecte, aucun nouveau snapshot ne vient débloquer l'écran.
+  PID = pid; players[pid] = me; ME = me;
+  localStorage.setItem('qfq:' + CODE, pid);
+  render();
+}
+
+/* ---------- affirmation ---------- */
+$('claim').addEventListener('input', e => {
+  $('claim-left').textContent = MAX_CLAIM - e.target.value.length;
+});
+$('btn-claim').onclick = async () => {
+  const v = ($('claim').value || '').trim();
+  if (v.length < 5) { toast('Un peu plus long, pour qu\'on puisse chercher.'); return; }
+  await updateDoc(playerRef(CODE, PID), { claim: v.slice(0, MAX_CLAIM) });
+  if (ME) ME.claim = v.slice(0, MAX_CLAIM);   // ne pas dépendre du retour serveur
+  editing = false;
+  render();
+};
+$('btn-edit').onclick = () => { editing = true; $('claim').value = ME?.claim || '';
+  $('claim-left').textContent = MAX_CLAIM - ($('claim').value.length); render(); };
+
+/* ---------- jeu ---------- */
+let sheetIndex = null;
+function openSheet(i){
+  sheetIndex = i;
+  const deck = session.deck || [];
+  const answers = myGroup?.answers || {};
+  $('sheet-q').textContent = players[deck[i]] ? '' : '';
+  $('sheet-q').textContent = `N°${i+1} — ${claimOf(deck[i])}`;
+  const used = new Map();
+  Object.entries(answers).forEach(([k, pid]) => { if (pid) used.set(pid, Number(k)); });
+  // Un nom déjà placé ailleurs reste cliquable : le choisir ici le DÉPLACE
+  // et libère sa case précédente (bijection maintenue sans manipulation).
+  $('sheet-list').innerHTML = deck.map(pid => {
+    const at = used.get(pid);
+    const busy = at !== undefined && at !== i;
+    const here = at === i;
+    return `<button class="namebtn" data-pid="${pid}" style="${here?'border-color:#1d4ed8;background:#eff4ff':(busy?'color:#9aa1ad':'')}">
+      ${escapeHtml(players[pid]?.name || '?')}
+      ${busy?`<span class="tag">déplacer depuis le n°${at+1}</span>`:''}${here?'<span class="tag">choix actuel</span>':''}
+    </button>`;
+  }).join('');
+  $('sheet-list').querySelectorAll('button[data-pid]').forEach(b =>
+    b.onclick = () => setAnswer(i, b.dataset.pid));
+  $('sheet').classList.add('open');
+}
+function closeSheet(){ $('sheet').classList.remove('open'); sheetIndex = null; }
+$('sheet-veil').onclick = closeSheet;
+$('sheet-clear').onclick = () => { if (sheetIndex !== null) setAnswer(sheetIndex, null); };
+
+function claimOf(pid){ return players[pid]?.claim || '(affirmation retirée)'; }
+
+async function setAnswer(i, pid){
+  closeSheet();
+  if (myGroup?.done) return;
+  const patch = { lastBy: ME?.name || '', updatedAt: Date.now() };
+  const answers = myGroup?.answers || {};
+  // bijection stricte : un nom ne peut occuper qu'une seule proposition
+  if (pid){
+    Object.entries(answers).forEach(([k, v]) => { if (v === pid && k !== String(i)) patch['answers.' + k] = deleteField(); });
+    patch['answers.' + i] = pid;
+  } else {
+    patch['answers.' + i] = deleteField();
+  }
+  // rendu optimiste : la grille réagit au doigt, le serveur confirme ensuite
+  if (myGroup){
+    myGroup.answers = myGroup.answers || {};
+    Object.keys(patch).forEach(k => {
+      if (!k.startsWith('answers.')) return;
+      const idx = k.slice(8);
+      if (patch[k] && patch[k].__del === undefined && typeof patch[k] === 'string') myGroup.answers[idx] = patch[k];
+      else delete myGroup.answers[idx];
+    });
+    renderPlay();
+  }
+  await updateDoc(groupRef(CODE, myGroup.gid), patch);
+}
+
+$('btn-validate').onclick = async () => {
+  const deck = session.deck || [];
+  const filled = Object.values(myGroup?.answers || {}).filter(Boolean).length;
+  const miss = deck.length - filled;
+  const msg = miss > 0
+    ? `Il reste ${miss} affirmation${miss>1?'s':''} sans nom : elle${miss>1?'s':''} sera${miss>1?'ient':''} comptée${miss>1?'s':''} fausse${miss>1?'s':''}.\n\nValider quand même la réponse du groupe ?`
+    : `Valider la réponse du groupe ? Elle ne sera plus modifiable.`;
+  if (!confirm(msg)) return;
+  await updateDoc(groupRef(CODE, myGroup.gid), { done: true, lastBy: ME?.name || '', updatedAt: Date.now() });
+  if (myGroup) { myGroup.done = true; render(); }
+};
+
+$('btn-goplay').onclick = () => { seenGroupAnnounce = true; render(); };
+
+/* ---------- chronomètre ---------- */
+setInterval(() => {
+  if (!session || $('v-play').hidden) return;
+  const el = $('play-timer');
+  if (session.timerPaused != null) { el.textContent = '⏸ ' + fmtTime(session.timerPaused); el.classList.remove('urgent'); return; }
+  if (!session.timerEndsAt) { el.textContent = ''; return; }
+  const left = (session.timerEndsAt - Date.now()) / 1000;
+  el.textContent = fmtTime(left);
+  el.classList.toggle('urgent', left <= 120);
+}, 500);
+
+/* ---------- rendu ---------- */
+function render(){
+  if (!CODE || !session) return;
+  if (!PID || !ME){ renderRoster(); show('v-who'); return; }
+
+  const phase = session.phase || 'collecte';
+
+  if (phase === 'resultats' && myGroup){ renderRes(); show('v-res'); $('bottom').hidden = true; return; }
+
+  if ((phase === 'lobby' || phase === 'collecte') || !myGroup){
+    if (!ME.claim || editing){
+      // ne JAMAIS écraser ce que la personne est en train d'écrire :
+      // render() est rappelé à chaque connexion d'un autre participant.
+      const el = $('claim');
+      if (el.value === '' && ME.claim) el.value = ME.claim;
+      $('claim-left').textContent = MAX_CLAIM - el.value.length;
+      show('v-claim'); $('bottom').hidden = true; return;
+    }
+    $('wait-claim').textContent = ME.claim;
+    const all = Object.values(players), done = all.filter(p => p.claim).length;
+    $('wait-count').textContent = `${done} / ${all.length}`;
+    $('wait-bar').style.width = (all.length ? done / all.length * 100 : 0) + '%';
+    show('v-wait'); $('bottom').hidden = true; return;
+  }
+
+  // groupe assigné
+  if (!seenGroupAnnounce){
+    $('group-letter').textContent = myGroup.letter || myGroup.gid;
+    $('group-members').innerHTML = (myGroup.members || [])
+      .map(pid => `<span class="chip ${pid===PID?'me':''}">${escapeHtml(players[pid]?.name || '?')}</span>`).join('');
+    show('v-group'); $('bottom').hidden = true; return;
+  }
+
+  renderPlay(); show('v-play');
+}
+
+function renderPlay(){
+  const deck = session.deck || [];
+  const answers = myGroup.answers || {};
+  const locked = !!myGroup.done;
+  $('play-letter').textContent = myGroup.letter || myGroup.gid;
+  const filled = Object.values(answers).filter(Boolean).length;
+  $('play-count').textContent = `${filled}/${deck.length}`;
+  $('play-bar').style.width = (deck.length ? filled / deck.length * 100 : 0) + '%';
+  $('locked-banner').hidden = !locked;
+
+  $('props').innerHTML = deck.map((authorPid, i) => {
+    const ans = answers[String(i)];
+    return `<button class="prop ${ans?'filled':''}" data-i="${i}" ${locked?'disabled':''}>
+      <span class="num">${i+1}</span>
+      <span class="txt">${escapeHtml(claimOf(authorPid))}
+        <span class="who ${ans?'':'empty'}">${ans ? '→ ' + escapeHtml(players[ans]?.name || '?') : 'Toucher pour attribuer'}</span>
+      </span></button>`;
+  }).join('');
+  if (!locked) $('props').querySelectorAll('.prop').forEach(b => b.onclick = () => openSheet(Number(b.dataset.i)));
+  if (flashSet.size){
+    flashSet.forEach(i => document.querySelector(`.prop[data-i="${i}"]`)?.classList.add('flash'));
+    flashSet.clear();
+  }
+
+  $('bottom').hidden = locked;
+  $('btn-validate').textContent = filled === deck.length
+    ? 'Valider la réponse du groupe'
+    : `Valider (${deck.length - filled} sans nom)`;
+}
+
+function renderRes(){
+  const deck = session.deck || [];
+  const ranked = rankGroups(groupsAll, deck);
+  const mine = ranked.find(g => g.gid === myGroup.gid);
+  $('res-letter').textContent = mine.letter || mine.gid;
+  $('res-pct').textContent = String(mine.pct).replace('.', ',');
+  $('res-rank').textContent = `${mine.rank}${mine.rank===1?'er':'e'} sur ${ranked.length} groupe${ranked.length>1?'s':''}`;
+  $('res-ok').textContent = mine.extOk;
+  $('res-ext').textContent = mine.ext;
+
+  $('res-detail').innerHTML = mine.detail.map(d => {
+    const truth = players[d.authorPid]?.name || '?';
+    const given = d.ans ? (players[d.ans]?.name || '?') : '—';
+    const cls = d.own ? 'own' : (d.ok ? 'ok' : 'ko');
+    const label = d.own ? 'affirmation de votre groupe (non comptée)'
+                        : (d.ok ? 'trouvé' : `vous aviez dit : ${escapeHtml(given)}`);
+    return `<div class="res ${cls}">
+      <div>${escapeHtml(claimOf(d.authorPid))}</div>
+      <div class="l"><strong>${escapeHtml(truth)}</strong> — ${label}</div>
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>

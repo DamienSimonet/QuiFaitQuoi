@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qui fait quoi ? — Projection</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#141b33; --line:#26304f; --ink:#f4f6fb; --muted:#9aa6c4;
+    --accent:#7aa2ff; --ok:#4ade80; --ko:#f87171; --amber:#fbbf24;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0; background:var(--bg); color:var(--ink); overflow:hidden;
+    font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .screen{position:absolute; inset:0; padding:3vh 4vw; display:none; flex-direction:column}
+  .screen.on{display:flex}
+  .head{display:flex; align-items:baseline; gap:24px; margin-bottom:2.4vh; flex:0 0 auto}
+  .head h1{font-size:clamp(22px,2.6vw,40px); margin:0; font-weight:800; letter-spacing:-.02em}
+  .head .sub{color:var(--muted); font-size:clamp(14px,1.2vw,20px)}
+  .grow{flex:1}
+  .timer{font-variant-numeric:tabular-nums; font-weight:800; font-size:clamp(30px,4vw,64px); letter-spacing:-.03em}
+  .timer.urgent{color:var(--ko)}
+  .body{flex:1; min-height:0; display:flex; gap:3vw}
+
+  /* accueil */
+  .qrbox{background:#fff; padding:18px; border-radius:20px; display:inline-block}
+  .code{font-size:clamp(48px,8vw,130px); font-weight:900; letter-spacing:.14em; line-height:1; margin:2vh 0}
+  .url{color:var(--muted); font-size:clamp(13px,1.1vw,18px); word-break:break-all}
+  .names{flex:1; display:flex; flex-wrap:wrap; align-content:flex-start; gap:10px; overflow:hidden}
+  .name{background:var(--panel); border:1px solid var(--line); border-radius:99px;
+    padding:10px 18px; font-size:clamp(15px,1.5vw,26px); color:var(--muted)}
+  .name.done{background:#16351f; border-color:#2c6b3c; color:#dcfce7}
+  .name.done::before{content:"✓ "; color:var(--ok)}
+  .counter{font-size:clamp(26px,3vw,52px); font-weight:800}
+
+  /* groupes */
+  .cards{flex:1; display:grid; gap:2vh 2vw; align-content:center;
+    grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); overflow:hidden}
+  .gcard{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:2vh 1.6vw}
+  .gcard h3{margin:0 0 6px; font-size:clamp(20px,2vw,34px); font-weight:800}
+  .gcard .mem{color:var(--muted); font-size:clamp(13px,1.05vw,18px); line-height:1.6}
+  .bar{height:12px; background:#0b1020; border-radius:99px; overflow:hidden; margin:14px 0 8px}
+  .bar>i{display:block; height:100%; background:var(--accent); transition:width .4s}
+  .gcard.done{border-color:#2c6b3c}
+  .gcard.done .bar>i{background:var(--ok)}
+  .state{font-size:clamp(13px,1.1vw,18px); color:var(--muted)}
+  .state.ok{color:var(--ok); font-weight:700}
+
+  /* classement */
+  .rank{flex:1; display:flex; flex-direction:column; justify-content:center; gap:1.4vh; overflow:hidden}
+  .rrow{display:flex; align-items:center; gap:2vw; background:var(--panel); border:1px solid var(--line);
+    border-radius:16px; padding:1.6vh 1.8vw}
+  .rrow .pos{font-size:clamp(24px,2.6vw,44px); font-weight:900; color:var(--muted); width:2.2ch}
+  .rrow.first{background:linear-gradient(90deg,#1e2a52,#141b33); border-color:#3b5bbd}
+  .rrow.first .pos{color:var(--amber)}
+  .rrow .gl{font-size:clamp(22px,2.4vw,40px); font-weight:800; width:3ch}
+  .rrow .sc{margin-left:auto; font-size:clamp(26px,3vw,52px); font-weight:900; letter-spacing:-.02em}
+  .rrow .det{color:var(--muted); font-size:clamp(13px,1.1vw,18px); width:12ch; text-align:right}
+  .rrow .mem{color:var(--muted); font-size:clamp(12px,1vw,16px); flex:1; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap}
+
+  /* détail */
+  .list{flex:1; overflow:hidden; display:grid; grid-template-columns:1fr 1fr; gap:.8vh 2vw; align-content:start}
+  .item{display:flex; gap:12px; align-items:flex-start; border-left:4px solid var(--line);
+    padding:.5vh 0 .5vh 12px; font-size:clamp(13px,1.15vw,20px)}
+  .item.ok{border-color:var(--ok)} .item.ko{border-color:var(--ko)}
+  .item.own{border-color:#39415e; opacity:.62}
+  .item .c{flex:1}
+  .item .who{display:block; color:var(--muted); font-size:.86em; margin-top:2px}
+  .item .who b{color:var(--ink)}
+  .item .who .bad{color:var(--ko)}
+
+  /* surprises */
+  .cols{flex:1; display:grid; grid-template-columns:1fr 1fr 1fr; gap:2vw; overflow:hidden}
+  .col{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:2vh 1.4vw; overflow:hidden}
+  .col h3{margin:0 0 4px; font-size:clamp(16px,1.5vw,26px)}
+  .col p.k{color:var(--muted); font-size:clamp(12px,1vw,16px); margin:0 0 14px}
+  .col ul{margin:0; padding-left:1.1em; font-size:clamp(13px,1.15vw,20px); line-height:1.5}
+  .col li{margin-bottom:9px}
+  .col li b{color:var(--accent)}
+  .empty{color:var(--muted); font-style:italic}
+  .foot{flex:0 0 auto; color:var(--muted); font-size:clamp(11px,.9vw,15px); padding-top:1.4vh}
+</style>
+</head>
+<body>
+
+<!-- attente de session -->
+<div class="screen on" id="s-none" style="align-items:center; justify-content:center">
+  <h1 style="font-size:clamp(20px,2vw,32px)">En attente d'une session…</h1>
+  <p class="url" id="none-msg">Ouvrez le panneau de pilotage et créez une session.</p>
+</div>
+
+<!-- 1. accueil / collecte -->
+<div class="screen" id="s-collect">
+  <div class="head">
+    <h1>Qui fait quoi ?</h1>
+    <span class="sub">Une chose que personne ne sait sur vous</span>
+    <span class="grow"></span>
+    <span class="counter"><span id="c-done">0</span> / <span id="c-all">0</span> ont répondu</span>
+  </div>
+  <div class="body">
+    <div style="flex:0 0 auto; text-align:center">
+      <div class="qrbox" id="qr"></div>
+      <div class="code" id="c-code">----</div>
+      <div class="url" id="c-url"></div>
+    </div>
+    <div class="names" id="c-names"></div>
+  </div>
+</div>
+
+<!-- 2. jeu -->
+<div class="screen" id="s-play">
+  <div class="head">
+    <h1>À vos groupes</h1>
+    <span class="sub" id="p-sub"></span>
+    <span class="grow"></span>
+    <span class="timer" id="p-timer"></span>
+  </div>
+  <div class="cards" id="p-cards"></div>
+</div>
+
+<!-- 3a. classement -->
+<div class="screen" id="s-rank">
+  <div class="head"><h1>Classement</h1>
+    <span class="sub">% de bonnes réponses sur les affirmations à deviner</span></div>
+  <div class="rank" id="r-list"></div>
+  <div class="foot">Les affirmations des membres d'un groupe ne comptent pas dans son score : les groupes sont comparables quelle que soit leur taille.</div>
+</div>
+
+<!-- 3b. détail d'un groupe -->
+<div class="screen" id="s-detail">
+  <div class="head"><h1>Groupe <span id="d-letter"></span></h1>
+    <span class="sub" id="d-sub"></span></div>
+  <div class="list" id="d-list"></div>
+</div>
+
+<!-- 3c. surprises -->
+<div class="screen" id="s-surp">
+  <div class="head"><h1>Les surprises</h1>
+    <span class="sub">Ce que le groupe croyait savoir</span></div>
+  <div class="cols">
+    <div class="col"><h3>Personne n'a trouvé</h3><p class="k">Aucun groupe n'a su les attribuer</p><ul id="su-myst"></ul></div>
+    <div class="col"><h3>Tout le monde a trouvé</h3><p class="k">Attribuées correctement par tous</p><ul id="su-evid"></ul></div>
+    <div class="col"><h3>Les aimants à projections</h3><p class="k">Les plus souvent cités à tort</p><ul id="su-aim"></ul></div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  sessionRef, playersCol, groupsCol, onSnapshot, getDoc,
+  escapeHtml, fmtTime, rankGroups, analyseSurprises
+} from './qfq-common.js';
+
+const $ = id => document.getElementById(id);
+const screens = ['s-none','s-collect','s-play','s-rank','s-detail','s-surp'];
+function show(id){ screens.forEach(s => $(s).classList.toggle('on', s === id)); }
+
+let CODE = (new URLSearchParams(location.search).get('s') || '').toUpperCase();
+let session = null, players = {}, groups = [], qrDrawn = '';
+
+if (!/^[A-Z]{4}$/.test(CODE)) {
+  CODE = (localStorage.getItem('qfq:admin') || '').toUpperCase();
+}
+if (/^[A-Z]{4}$/.test(CODE)) start(); else $('none-msg').textContent = "Ouvrez ce tableau depuis le panneau de pilotage (bouton « Ouvrir le mur »).";
+
+function start(){
+  onSnapshot(sessionRef(CODE), s => { session = s.exists() ? s.data() : null; render(); });
+  onSnapshot(playersCol(CODE), s => { players = {}; s.forEach(d => players[d.id] = {id:d.id, ...d.data()}); render(); });
+  onSnapshot(groupsCol(CODE), s => {
+    groups = []; s.forEach(d => groups.push({gid:d.id, ...d.data()}));
+    groups.sort((a,b)=> (a.letter||a.gid).localeCompare(b.letter||b.gid)); render();
+  });
+}
+
+setInterval(() => {
+  if (!session) return;
+  const el = $('p-timer');
+  if (session.timerPaused != null){ el.textContent = '⏸ ' + fmtTime(session.timerPaused); el.classList.remove('urgent'); }
+  else if (session.timerEndsAt){
+    const left = (session.timerEndsAt - Date.now())/1000;
+    el.textContent = fmtTime(left);
+    el.classList.toggle('urgent', left <= 120);
+  } else el.textContent = '';
+}, 500);
+
+function claimOf(pid){ return players[pid]?.claim || '(affirmation retirée)'; }
+function nameOf(pid){ return players[pid]?.name || '?'; }
+
+function render(){
+  if (!session){ show('s-none'); return; }
+  const phase = session.phase || 'collecte';
+
+  if (phase === 'lobby' || phase === 'collecte'){ renderCollect(); show('s-collect'); return; }
+  if (phase === 'jeu'){ renderPlay(); show('s-play'); return; }
+
+  const view = session.wallView || 'classement';
+  if (view.startsWith('groupe:')){ renderDetail(view.slice(7)); show('s-detail'); return; }
+  if (view === 'surprises'){ renderSurprises(); show('s-surp'); return; }
+  renderRank(); show('s-rank');
+}
+
+function renderCollect(){
+  const url = location.href.replace(/tableau\.html.*$/,'') + 'index.html?s=' + CODE;
+  $('c-code').textContent = CODE;
+  $('c-url').textContent = url;
+  if (qrDrawn !== url && window.QRCode){
+    $('qr').innerHTML = '';
+    new QRCode($('qr'), { text:url, width:260, height:260, colorDark:'#0b1020', colorLight:'#ffffff' });
+    qrDrawn = url;
+  }
+  const all = Object.values(players).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const done = all.filter(p => (p.claim||'').trim());
+  $('c-done').textContent = done.length;
+  $('c-all').textContent = all.length;
+  $('c-names').innerHTML = all.map(p =>
+    `<span class="name ${p.claim?'done':''}">${escapeHtml(p.name)}</span>`).join('')
+    || '<span class="name">en attente des premières connexions…</span>';
+}
+
+function renderPlay(){
+  const deck = session.deck || [];
+  const doneG = groups.filter(g=>g.done).length;
+  $('p-sub').textContent = `${deck.length} affirmations · ${doneG} groupe${doneG>1?'s':''} sur ${groups.length} ${doneG>1?'ont':'a'} validé`;
+  $('p-cards').innerHTML = groups.map(g => {
+    const filled = Object.values(g.answers||{}).filter(Boolean).length;
+    const pct = deck.length ? filled/deck.length*100 : 0;
+    return `<div class="gcard ${g.done?'done':''}">
+      <h3>Groupe ${escapeHtml(g.letter||g.gid)}</h3>
+      <div class="mem">${(g.members||[]).map(id=>escapeHtml(nameOf(id))).join(' · ')}</div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="state ${g.done?'ok':''}">${g.done ? '✓ réponse validée' : `${filled} / ${deck.length} affirmations placées`}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderRank(){
+  const deck = session.deck || [];
+  const ranked = rankGroups(groups, deck);
+  $('r-list').innerHTML = ranked.map(g => `
+    <div class="rrow ${g.rank===1?'first':''}">
+      <div class="pos">${g.rank}</div>
+      <div class="gl">${escapeHtml(g.letter||g.gid)}</div>
+      <div class="mem">${(g.members||[]).map(id=>escapeHtml(nameOf(id))).join(' · ')}</div>
+      <div class="det">${g.extOk} / ${g.ext} trouvées</div>
+      <div class="sc">${String(g.pct).replace('.',',')} %</div>
+    </div>`).join('');
+}
+
+function renderDetail(gid){
+  const deck = session.deck || [];
+  const g = rankGroups(groups, deck).find(x => x.gid === gid);
+  if (!g){ renderRank(); show('s-rank'); return; }
+  $('d-letter').textContent = g.letter || g.gid;
+  $('d-sub').textContent = `${String(g.pct).replace('.',',')} % · ${g.extOk} bonnes réponses sur ${g.ext} · ${(g.members||[]).map(nameOf).join(', ')}`;
+  $('d-list').innerHTML = g.detail.map(d => {
+    const cls = d.own ? 'own' : (d.ok ? 'ok' : 'ko');
+    const who = d.own
+      ? `<b>${escapeHtml(nameOf(d.authorPid))}</b> — du groupe, non comptée`
+      : (d.ok
+        ? `<b>${escapeHtml(nameOf(d.authorPid))}</b> — trouvé`
+        : `<b>${escapeHtml(nameOf(d.authorPid))}</b> — dit : <span class="bad">${d.ans?escapeHtml(nameOf(d.ans)):'personne'}</span>`);
+    return `<div class="item ${cls}"><div class="c">${escapeHtml(claimOf(d.authorPid))}
+      <span class="who">${who}</span></div></div>`;
+  }).join('');
+}
+
+function renderSurprises(){
+  const deck = session.deck || [];
+  const a = analyseSurprises(groups, deck, players);
+  const li = arr => arr.length
+    ? arr.map(p => `<li>${escapeHtml(claimOf(p.authorPid))} — <b>${escapeHtml(nameOf(p.authorPid))}</b></li>`).join('')
+    : '<li class="empty">aucune</li>';
+  $('su-myst').innerHTML = li(a.mysteres.slice(0,8));
+  $('su-evid').innerHTML = li(a.evidences.slice(0,8));
+  $('su-aim').innerHTML = a.aimants.length
+    ? a.aimants.map(x => `<li><b>${escapeHtml(x.name)}</b> — ${x.n} attribution${x.n>1?'s':''} erronée${x.n>1?'s':''}</li>`).join('')
+    : '<li class="empty">aucune</li>';
+}
+</script>
+</body>
+</html>

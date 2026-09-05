@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qui fait quoi ? — Pilotage</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#fff; --ink:#111827; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#1d4ed8; --accent-soft:#eff4ff; --ok:#047857; --ok-soft:#ecfdf5;
+    --ko:#b91c1c; --ko-soft:#fef2f2; --amber:#b45309; --amber-soft:#fffbeb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{background:#fff; border-bottom:1px solid var(--line); padding:12px 20px;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap; position:sticky; top:0; z-index:10}
+  header h1{font-size:16px; margin:0; letter-spacing:-.01em}
+  .code{font-size:26px; font-weight:800; letter-spacing:.18em; color:var(--accent)}
+  .phasepill{background:var(--accent-soft); color:var(--accent); border-radius:99px;
+    padding:5px 13px; font-size:13px; font-weight:600}
+  .grow{flex:1}
+  main{max-width:1180px; margin:0 auto; padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:18px}
+  @media (max-width:900px){ main{grid-template-columns:1fr} }
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px}
+  .card h2{font-size:14px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+    margin:0 0 12px; font-weight:700}
+  .full{grid-column:1/-1}
+  button{font:inherit; cursor:pointer}
+  .btn{padding:10px 16px; border-radius:10px; border:0; background:var(--accent); color:#fff; font-weight:600}
+  .btn.ghost{background:#fff; border:1px solid var(--line); color:var(--ink); font-weight:500}
+  .btn.big{padding:14px 20px; font-size:16px; width:100%}
+  .btn.danger{background:var(--ko)}
+  .btn.warn{background:var(--amber)}
+  .btn:disabled{background:#c7cbd3; cursor:not-allowed}
+  .btn.ghost:disabled{background:#f3f4f6; color:#9aa1ad}
+  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  input[type=text], input[type=number], textarea, select{
+    font:inherit; padding:9px 11px; border:1px solid var(--line); border-radius:9px; background:#fff}
+  textarea{width:100%; min-height:150px; resize:vertical; font-size:14px}
+  table{width:100%; border-collapse:collapse; font-size:14px}
+  th{text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--muted); border-bottom:1px solid var(--line); padding:7px 8px}
+  td{padding:8px; border-bottom:1px solid #f1f2f4; vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .pill{display:inline-block; border-radius:99px; padding:2px 9px; font-size:12px; font-weight:600}
+  .pill.ok{background:var(--ok-soft); color:var(--ok)}
+  .pill.wait{background:#f3f4f6; color:var(--muted)}
+  .pill.g{background:var(--accent-soft); color:var(--accent)}
+  .mini{font-size:12px; padding:5px 9px; border-radius:8px; border:1px solid var(--line); background:#fff}
+  .muted{color:var(--muted); font-size:13px}
+  .bar{height:7px; background:var(--line); border-radius:99px; overflow:hidden; min-width:110px; flex:1}
+  .bar>i{display:block; height:100%; background:var(--accent)}
+  .timer{font-variant-numeric:tabular-nums; font-weight:800; font-size:30px; letter-spacing:-.02em}
+  .kpi{display:flex; gap:22px; margin-bottom:12px}
+  .kpi div span{display:block; font-size:26px; font-weight:800; letter-spacing:-.02em}
+  .kpi div small{color:var(--muted); font-size:12px}
+  .step{background:var(--amber-soft); border:1px solid #fde68a; border-radius:11px; padding:12px; margin-bottom:12px; font-size:14px}
+  .claim{font-size:13px; color:#374151}
+  #setup{max-width:520px; margin:60px auto; padding:0 20px}
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+
+<!-- ======== ECRAN DE DEPART ======== -->
+<div id="setup">
+  <div class="card">
+    <h2>Qui fait quoi ? — pilotage</h2>
+    <button class="btn big" id="btn-new">Créer une nouvelle session</button>
+    <p class="muted" style="text-align:center; margin:16px 0">ou</p>
+    <div class="row">
+      <input type="text" id="join-code" maxlength="4" placeholder="ABCD"
+             style="text-transform:uppercase; letter-spacing:.2em; width:120px; text-align:center; font-weight:700">
+      <button class="btn ghost" id="btn-join">Reprendre une session</button>
+    </div>
+    <p class="muted" id="setup-err"></p>
+  </div>
+</div>
+
+<!-- ======== PILOTAGE ======== -->
+<div id="app" class="hidden">
+<header>
+  <h1>Qui fait quoi ?</h1>
+  <span class="code" id="h-code"></span>
+  <span class="phasepill" id="h-phase"></span>
+  <span class="grow"></span>
+  <span class="muted" id="h-url"></span>
+  <button class="mini" id="btn-wall">Ouvrir le mur ↗</button>
+  <button class="mini" id="btn-quit">Quitter</button>
+</header>
+
+<main>
+  <!-- colonne gauche -->
+  <div class="card" id="panel-left">
+    <h2 id="left-title">Participants</h2>
+    <div class="kpi">
+      <div><span id="k-conn">0</span><small>connectés</small></div>
+      <div><span id="k-claims">0</span><small>ont répondu</small></div>
+      <div><span id="k-groups">—</span><small>groupes</small></div>
+    </div>
+    <table><thead><tr><th>Nom</th><th>Affirmation</th><th style="width:1%"></th></tr></thead>
+      <tbody id="tb-players"></tbody></table>
+    <p class="muted" id="empty-players">Personne n'est encore connecté.</p>
+  </div>
+
+  <!-- colonne droite -->
+  <div>
+    <!-- liste des inscrits -->
+    <div class="card" id="card-roster" style="margin-bottom:18px">
+      <h2>Liste des inscrits</h2>
+      <p class="muted" style="margin-top:0">Un nom par ligne. Les participants la voient à la connexion ; ils peuvent aussi se déclarer hors liste.</p>
+      <textarea id="roster" placeholder="Camille Durand&#10;Alex Martin&#10;..."></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="btn-roster">Enregistrer la liste</button>
+        <span class="muted" id="roster-info"></span>
+      </div>
+    </div>
+
+    <!-- répartition -->
+    <div class="card" id="card-split" style="margin-bottom:18px">
+      <h2>Répartition en groupes</h2>
+      <div class="row">
+        <label for="gsize" class="muted">Personnes par groupe</label>
+        <input type="number" id="gsize" value="6" min="2" max="12" style="width:80px">
+      </div>
+      <p class="step" id="split-preview" style="margin-top:12px"></p>
+      <button class="btn big" id="btn-split">Répartir et lancer le jeu</button>
+      <p class="muted" id="split-warn"></p>
+    </div>
+
+    <!-- chrono + groupes -->
+    <div class="card" id="card-play" style="margin-bottom:18px">
+      <h2>Chronomètre</h2>
+      <div class="row" style="margin-bottom:12px">
+        <span class="timer" id="c-timer">—</span>
+        <span class="grow"></span>
+        <input type="number" id="dur" value="15" min="1" max="90" style="width:70px"> <span class="muted">min</span>
+        <button class="mini" id="t-start">Démarrer</button>
+        <button class="mini" id="t-pause">Pause</button>
+        <button class="mini" id="t-plus">+2 min</button>
+        <button class="mini" id="t-stop">Arrêter</button>
+      </div>
+      <h2>Groupes</h2>
+      <table><thead><tr><th>Groupe</th><th>Avancement</th><th>Statut</th><th style="width:1%"></th></tr></thead>
+        <tbody id="tb-groups"></tbody></table>
+      <button class="btn big warn" id="btn-results" style="margin-top:14px">Afficher les résultats</button>
+    </div>
+
+    <!-- résultats -->
+    <div class="card" id="card-res" style="margin-bottom:18px">
+      <h2>Écran projeté</h2>
+      <div class="row" id="wall-buttons"></div>
+      <h2 style="margin-top:18px">Classement</h2>
+      <table><thead><tr><th>#</th><th>Groupe</th><th>Score</th><th>Bonnes</th></tr></thead>
+        <tbody id="tb-rank"></tbody></table>
+    </div>
+
+    <!-- administration -->
+    <div class="card">
+      <h2>Session</h2>
+      <div class="row">
+        <button class="mini" id="btn-back">Revenir à la phase précédente</button>
+        <button class="mini" id="btn-reset" style="color:#b91c1c">Effacer la session</button>
+      </div>
+      <p class="muted" style="margin-bottom:0">L'effacement supprime définitivement les noms et les affirmations sur le serveur.</p>
+    </div>
+  </div>
+</main>
+</div>
+
+<script type="module">
+import {
+  sessionRef, playersCol, playerRef, groupsCol, groupRef, db,
+  onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch, doc,
+  escapeHtml, newCode, fmtTime, makeGroups, rankGroups, shuffle, LETTERS
+} from './qfq-common.js';
+
+const $ = id => document.getElementById(id);
+let CODE = null, session = null, players = {}, groups = [], unsub = [];
+
+const PHASES = { lobby:'Accueil', collecte:'Collecte des affirmations', jeu:'Jeu en groupes', resultats:'Résultats' };
+
+/* ---------- démarrage ---------- */
+const saved = localStorage.getItem('qfq:admin');
+if (saved) open(saved);
+
+$('btn-new').onclick = async () => {
+  const code = newCode();
+  await setDoc(sessionRef(code), {
+    phase:'collecte', groupSize:6, createdAt:Date.now(), roster:[], deck:[],
+    timerSeconds:900, timerEndsAt:null, timerPaused:null, wallView:'classement'
+  });
+  open(code);
+};
+$('btn-join').onclick = async () => {
+  const code = ($('join-code').value||'').toUpperCase().trim();
+  if (!/^[A-Z]{4}$/.test(code)) { $('setup-err').textContent = 'Code à 4 lettres.'; return; }
+  const s = await getDoc(sessionRef(code));
+  if (!s.exists()) { $('setup-err').textContent = 'Session introuvable.'; return; }
+  open(code);
+};
+$('btn-quit').onclick = () => { localStorage.removeItem('qfq:admin'); location.reload(); };
+
+function open(code){
+  CODE = code;
+  localStorage.setItem('qfq:admin', code);
+  $('setup').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  $('h-code').textContent = code;
+  const base = location.href.replace(/commande\.html.*$/,'');
+  $('h-url').textContent = base + 'index.html?s=' + code;
+  $('btn-wall').onclick = () => window.open(base + 'tableau.html?s=' + code, '_blank');
+
+  unsub.forEach(u=>u()); unsub = [];
+  unsub.push(onSnapshot(sessionRef(CODE), s => {
+    if (!s.exists()) { localStorage.removeItem('qfq:admin'); location.reload(); return; }
+    session = s.data(); render();
+  }));
+  unsub.push(onSnapshot(playersCol(CODE), s => {
+    players = {}; s.forEach(d => players[d.id] = { id:d.id, ...d.data() }); render();
+  }));
+  unsub.push(onSnapshot(groupsCol(CODE), s => {
+    groups = []; s.forEach(d => groups.push({ gid:d.id, ...d.data() }));
+    groups.sort((a,b)=> (a.letter||a.gid).localeCompare(b.letter||b.gid)); render();
+  }));
+}
+
+/* ---------- liste des inscrits ---------- */
+$('btn-roster').onclick = async () => {
+  const names = ($('roster').value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  await updateDoc(sessionRef(CODE), { roster: names });
+  $('roster-info').textContent = names.length + ' nom' + (names.length>1?'s':'') + ' enregistré' + (names.length>1?'s':'');
+  setTimeout(()=> $('roster-info').textContent = '', 3000);
+};
+
+/* ---------- répartition ---------- */
+$('gsize').oninput = () => previewSplit();
+function previewSplit(){
+  const ids = Object.keys(players);
+  const t = Number($('gsize').value) || 6;
+  if (!ids.length){ $('split-preview').textContent = 'Aucun participant connecté.'; return null; }
+  const g = makeGroups(ids, t);
+  const sizes = g.map(x=>x.members.length).sort((a,b)=>b-a);
+  $('split-preview').innerHTML =
+    `<strong>${ids.length} participants</strong> → <strong>${g.length} groupe${g.length>1?'s':''}</strong> de ${sizes.join(', ')} personnes.`;
+  const missing = Object.values(players).filter(p=>!p.claim).length;
+  $('split-warn').textContent = missing
+    ? `${missing} personne${missing>1?'s n\'ont':' n\'a'} pas encore saisi d'affirmation : elle${missing>1?'s':''} jouera${missing>1?'ient':''} mais n'apparaîtra${missing>1?'ient':''} pas dans les cartes à deviner.`
+    : '';
+  return g;
+}
+
+$('btn-split').onclick = async () => {
+  const ids = Object.keys(players);
+  if (ids.length < 2) { alert('Il faut au moins 2 participants.'); return; }
+  const withClaim = ids.filter(id => (players[id].claim||'').trim());
+  if (withClaim.length < 2) { alert('Il faut au moins 2 affirmations.'); return; }
+  const g = makeGroups(ids, Number($('gsize').value) || 6);
+  if (!confirm(`Former ${g.length} groupe(s) et lancer le jeu avec ${withClaim.length} affirmations ?`)) return;
+
+  const deck = shuffle(withClaim);
+  const batch = writeBatch(db);
+  // on efface d'éventuels groupes précédents
+  const old = await getDocs(groupsCol(CODE));
+  old.forEach(d => { if (!g.some(x=>x.gid===d.id)) batch.delete(d.ref); });
+  g.forEach(grp => {
+    batch.set(groupRef(CODE, grp.gid), {
+      letter: grp.letter, members: grp.members, answers:{}, done:false, lastBy:'', updatedAt:Date.now()
+    });
+    grp.members.forEach(pid => batch.update(playerRef(CODE, pid), { group: grp.gid }));
+  });
+  batch.update(sessionRef(CODE), {
+    phase:'jeu', deck, groupSize:Number($('gsize').value)||6,
+    timerSeconds:(Number($('dur').value)||15)*60, timerEndsAt:null, timerPaused:null
+  });
+  await batch.commit();
+};
+
+/* ---------- chronomètre ---------- */
+$('t-start').onclick = async () => {
+  const secs = session.timerPaused != null ? session.timerPaused : (Number($('dur').value)||15)*60;
+  await updateDoc(sessionRef(CODE), { timerEndsAt: Date.now() + secs*1000, timerPaused:null, timerSeconds:(Number($('dur').value)||15)*60 });
+};
+$('t-pause').onclick = async () => {
+  if (!session.timerEndsAt) return;
+  await updateDoc(sessionRef(CODE), { timerPaused: Math.max(0,(session.timerEndsAt - Date.now())/1000), timerEndsAt:null });
+};
+$('t-plus').onclick = async () => {
+  if (session.timerEndsAt) await updateDoc(sessionRef(CODE), { timerEndsAt: session.timerEndsAt + 120000 });
+  else if (session.timerPaused != null) await updateDoc(sessionRef(CODE), { timerPaused: session.timerPaused + 120 });
+};
+$('t-stop').onclick = () => updateDoc(sessionRef(CODE), { timerEndsAt:null, timerPaused:null });
+
+setInterval(() => {
+  if (!session) return;
+  const el = $('c-timer');
+  if (session.timerPaused != null) el.textContent = '⏸ ' + fmtTime(session.timerPaused);
+  else if (session.timerEndsAt) el.textContent = fmtTime((session.timerEndsAt - Date.now())/1000);
+  else el.textContent = '—';
+}, 500);
+
+/* ---------- phases ---------- */
+$('btn-results').onclick = async () => {
+  const notDone = groups.filter(g=>!g.done).length;
+  if (notDone && !confirm(`${notDone} groupe(s) n'ont pas validé. Passer quand même aux résultats ?`)) return;
+  await updateDoc(sessionRef(CODE), { phase:'resultats', wallView:'classement', timerEndsAt:null, timerPaused:null });
+};
+$('btn-back').onclick = async () => {
+  const p = session.phase;
+  if (p === 'resultats') await updateDoc(sessionRef(CODE), { phase:'jeu' });
+  else if (p === 'jeu' && confirm('Revenir à la collecte ? Les groupes et les réponses seront effacés.')) {
+    const batch = writeBatch(db);
+    (await getDocs(groupsCol(CODE))).forEach(d => batch.delete(d.ref));
+    Object.keys(players).forEach(pid => batch.update(playerRef(CODE,pid), { group:'' }));
+    batch.update(sessionRef(CODE), { phase:'collecte', deck:[], timerEndsAt:null, timerPaused:null });
+    await batch.commit();
+  }
+};
+$('btn-reset').onclick = async () => {
+  if (!confirm('Effacer définitivement cette session (noms, affirmations, réponses) ?')) return;
+  const batch = writeBatch(db);
+  (await getDocs(groupsCol(CODE))).forEach(d => batch.delete(d.ref));
+  (await getDocs(playersCol(CODE))).forEach(d => batch.delete(d.ref));
+  batch.delete(sessionRef(CODE));
+  await batch.commit();
+  localStorage.removeItem('qfq:admin');
+  location.reload();
+};
+
+/* ---------- rendu ---------- */
+function render(){
+  if (!session) return;
+  const phase = session.phase || 'collecte';
+  $('h-phase').textContent = PHASES[phase] || phase;
+  if (document.activeElement !== $('roster') && !$('roster').value && (session.roster||[]).length)
+    $('roster').value = (session.roster||[]).join('\n');
+
+  const all = Object.values(players);
+  const withClaim = all.filter(p => (p.claim||'').trim());
+  $('k-conn').textContent = all.length;
+  $('k-claims').textContent = withClaim.length;
+  $('k-groups').textContent = groups.length || '—';
+
+  // participants
+  $('empty-players').hidden = all.length > 0;
+  all.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+  $('tb-players').innerHTML = all.map(p => `
+    <tr>
+      <td><strong>${escapeHtml(p.name)}</strong>${p.group?` <span class="pill g">${escapeHtml(p.group)}</span>`:''}</td>
+      <td>${p.claim
+          ? `<span class="claim">${escapeHtml(p.claim)}</span>`
+          : '<span class="pill wait">en attente</span>'}</td>
+      <td class="row" style="gap:5px; flex-wrap:nowrap">
+        ${p.claim?`<button class="mini" data-clear="${p.id}">Faire réécrire</button>`:''}
+        <button class="mini" data-del="${p.id}">Retirer</button>
+      </td>
+    </tr>`).join('');
+  $('tb-players').querySelectorAll('[data-clear]').forEach(b => b.onclick = async () => {
+    if (confirm('Demander à ' + players[b.dataset.clear].name + ' de réécrire son affirmation ?'))
+      await updateDoc(playerRef(CODE, b.dataset.clear), { claim:'' });
+  });
+  $('tb-players').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (confirm('Retirer ' + players[b.dataset.del].name + ' de la session ?'))
+      await deleteDoc(playerRef(CODE, b.dataset.del));
+  });
+
+  // visibilité des cartes selon la phase
+  $('card-roster').classList.toggle('hidden', phase !== 'collecte' && phase !== 'lobby');
+  $('card-split').classList.toggle('hidden', phase !== 'collecte' && phase !== 'lobby');
+  $('card-play').classList.toggle('hidden', phase !== 'jeu');
+  $('card-res').classList.toggle('hidden', phase !== 'resultats');
+  if (phase === 'collecte' || phase === 'lobby') previewSplit();
+
+  const deck = session.deck || [];
+
+  // groupes en cours de jeu
+  if (phase === 'jeu'){
+    $('tb-groups').innerHTML = groups.map(g => {
+      const filled = Object.values(g.answers||{}).filter(Boolean).length;
+      const pctw = deck.length ? filled/deck.length*100 : 0;
+      return `<tr>
+        <td><strong>${escapeHtml(g.letter||g.gid)}</strong><br>
+            <span class="muted">${(g.members||[]).map(id=>escapeHtml(players[id]?.name||'?')).join(', ')}</span></td>
+        <td><div class="row"><div class="bar"><i style="width:${pctw}%"></i></div>
+            <span class="muted">${filled}/${deck.length}</span></div></td>
+        <td>${g.done?'<span class="pill ok">validé</span>':'<span class="pill wait">en cours</span>'}</td>
+        <td>${g.done?`<button class="mini" data-reopen="${g.gid}">Rouvrir</button>`:''}</td>
+      </tr>`;
+    }).join('');
+    $('tb-groups').querySelectorAll('[data-reopen]').forEach(b => b.onclick = () =>
+      updateDoc(groupRef(CODE, b.dataset.reopen), { done:false }));
+  }
+
+  // résultats
+  if (phase === 'resultats'){
+    const ranked = rankGroups(groups, deck);
+    $('tb-rank').innerHTML = ranked.map(g => `<tr>
+      <td>${g.rank}</td><td><strong>${escapeHtml(g.letter||g.gid)}</strong></td>
+      <td><strong>${String(g.pct).replace('.',',')} %</strong></td>
+      <td class="muted">${g.extOk} / ${g.ext}</td></tr>`).join('');
+    const cur = session.wallView || 'classement';
+    $('wall-buttons').innerHTML =
+      `<button class="mini" data-w="classement" ${cur==='classement'?'style="border-color:#1d4ed8;color:#1d4ed8"':''}>Classement</button>` +
+      ranked.map(g=>`<button class="mini" data-w="groupe:${g.gid}" ${cur==='groupe:'+g.gid?'style="border-color:#1d4ed8;color:#1d4ed8"':''}>Détail ${escapeHtml(g.letter||g.gid)}</button>`).join('') +
+      `<button class="mini" data-w="surprises" ${cur==='surprises'?'style="border-color:#1d4ed8;color:#1d4ed8"':''}>Les surprises</button>`;
+    $('wall-buttons').querySelectorAll('[data-w]').forEach(b => b.onclick = () =>
+      updateDoc(sessionRef(CODE), { wallView: b.dataset.w }));
+  }
+}
+</script>
+</body>
+</html>
