@@ -241,7 +241,7 @@ import {
   sessionRef, playersCol, playerRef, groupsCol, groupRef,
   onSnapshot, setDoc, updateDoc, getDoc, getDocs, deleteField,
   escapeHtml, newId, fmtTime, normName, MAX_CLAIM, rankGroups
-} from './qfq-common.js';
+} from './qfq-common.js?v=20260905a';
 
 const $ = id => document.getElementById(id);
 const views = ['v-code','v-who','v-claim','v-wait','v-group','v-play','v-res'];
@@ -516,10 +516,10 @@ function renderRes(){
   const ranked = rankGroups(groupsAll, deck);
   const mine = ranked.find(g => g.gid === myGroup.gid);
   $('res-letter').textContent = mine.letter || mine.gid;
-  $('res-pct').textContent = mine.totalOk + ' / ' + mine.total;
+  $('res-pct').textContent = mine.totalOk + ' / ' + (mine.total ?? deck.length);
   $('res-rank').textContent = `${mine.rank}${mine.rank===1?'er':'e'} sur ${ranked.length} groupe${ranked.length>1?'s':''}`;
   $('res-ok').textContent = mine.totalOk;
-  $('res-ext').textContent = mine.total;
+  $('res-ext').textContent = mine.total ?? deck.length;
   $('res-extok').textContent = mine.extOk;
 
   $('res-detail').innerHTML = mine.detail.map(d => {

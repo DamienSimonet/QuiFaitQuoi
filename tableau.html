@@ -181,7 +181,7 @@ setTimeout(function () {
 import {
   sessionRef, playersCol, groupsCol, onSnapshot, getDoc,
   escapeHtml, fmtTime, rankGroups, analyseSurprises
-} from './qfq-common.js';
+} from './qfq-common.js?v=20260905a';
 
 const $ = id => document.getElementById(id);
 const screens = ['s-none','s-collect','s-play','s-rank','s-detail','s-surp'];
@@ -274,7 +274,7 @@ function renderRank(){
       <div class="gl">${escapeHtml(g.letter||g.gid)}</div>
       <div class="mem">${(g.members||[]).map(id=>escapeHtml(nameOf(id))).join(' · ')}</div>
       <div class="det">dont ${g.extOk} hors du groupe</div>
-      <div class="sc">${g.totalOk}<span style="font-size:.45em;font-weight:700;color:var(--muted)"> / ${g.total}</span></div>
+      <div class="sc">${g.totalOk}<span style="font-size:.45em;font-weight:700;color:var(--muted)"> / ${g.total ?? deck.length}</span></div>
     </div>`).join('');
 }
 
@@ -283,7 +283,7 @@ function renderDetail(gid){
   const g = rankGroups(groups, deck).find(x => x.gid === gid);
   if (!g){ renderRank(); show('s-rank'); return; }
   $('d-letter').textContent = g.letter || g.gid;
-  $('d-sub').textContent = `${g.totalOk} personnes identifiées sur ${g.total}, dont ${g.extOk} hors du groupe · ${(g.members||[]).map(nameOf).join(', ')}`;
+  $('d-sub').textContent = `${g.totalOk} personnes identifiées sur ${g.total ?? deck.length}, dont ${g.extOk} hors du groupe · ${(g.members||[]).map(nameOf).join(', ')}`;
   $('d-list').innerHTML = g.detail.map(d => {
     const cls = d.ok ? 'ok' : 'ko';
     const mark = d.own ? ' · du groupe' : '';

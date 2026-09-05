@@ -204,7 +204,7 @@ import {
   sessionRef, playersCol, playerRef, groupsCol, groupRef, db,
   onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch, doc,
   escapeHtml, newCode, fmtTime, makeGroups, rankGroups, shuffle, LETTERS
-} from './qfq-common.js';
+} from './qfq-common.js?v=20260905a';
 
 const $ = id => document.getElementById(id);
 let CODE = null, session = null, players = {}, groups = [], unsub = [];
@@ -437,7 +437,7 @@ function render(){
     const ranked = rankGroups(groups, deck);
     $('tb-rank').innerHTML = ranked.map(g => `<tr>
       <td>${g.rank}</td><td><strong>${escapeHtml(g.letter||g.gid)}</strong></td>
-      <td><strong>${g.totalOk} / ${g.total}</strong></td>
+      <td><strong>${g.totalOk} / ${g.total ?? deck.length}</strong></td>
       <td class="muted">${g.extOk} / ${g.ext}</td></tr>`).join('');
     const cur = session.wallView || 'classement';
     $('wall-buttons').innerHTML =
