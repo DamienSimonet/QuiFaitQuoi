@@ -7,17 +7,18 @@
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
-   >>>>>>>>>>>>>>>>  A REMPLACER : CONFIGURATION FIREBASE  <<<<<<<<<<<<<<
-   Recopier ici, à l'identique, le bloc firebaseConfig du jeu précédent.
-   (Console Firebase > Paramètres du projet > Vos applications > Config)
+   CONFIGURATION FIREBASE — projet « yoda-perdus-en-mer »
+   Le même projet que le premier jeu : les deux cohabitent dans la même
+   base, dans deux tiroirs distincts (/sessions et /qfq).
+   Rien à modifier ici.
    --------------------------------------------------------------------- */
 export const firebaseConfig = {
-  apiKey:            "A_REMPLACER",
-  authDomain:        "A_REMPLACER.firebaseapp.com",
-  projectId:         "A_REMPLACER",
-  storageBucket:     "A_REMPLACER.appspot.com",
-  messagingSenderId: "A_REMPLACER",
-  appId:             "A_REMPLACER"
+  apiKey:            "AIzaSyAfBRgmH-Nt7uhiZKmWVKi7B18_hkzJP74",
+  authDomain:        "yoda-perdus-en-mer.firebaseapp.com",
+  projectId:         "yoda-perdus-en-mer",
+  storageBucket:     "yoda-perdus-en-mer.firebasestorage.app",
+  messagingSenderId: "881660998060",
+  appId:             "1:881660998060:web:a3a81684998fb0684cca09"
 };
 /* ------------------------------------------------------------------- */
 
@@ -31,6 +32,12 @@ export {
   doc, collection, setDoc, updateDoc, deleteDoc,
   onSnapshot, getDocs, getDoc, deleteField, writeBatch
 };
+
+// Diagnostic : la cause n°1 de « rien ne se passe » est une config non remplacée.
+if (JSON.stringify(firebaseConfig).includes('A_REMPLACER') &&
+    typeof window !== 'undefined' && window.qfqError) {
+  window.qfqError("La configuration Firebase n'a pas été collée dans qfq-common.js : il y reste des « A_REMPLACER ». Rien ne peut fonctionner tant que ce bloc n'est pas remplacé par celui de votre projet Firebase.");
+}
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);

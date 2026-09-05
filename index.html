@@ -93,6 +93,36 @@
 </style>
 </head>
 <body>
+<script>
+/* Filet de sécurité : affiche à l'écran ce qui empêche la page de démarrer,
+   au lieu de laisser les boutons sans effet. */
+window.qfqReady = false;
+window.qfqError = function (msg) {
+  var d = document.getElementById('qfq-err');
+  if (!d) {
+    d = document.createElement('div');
+    d.id = 'qfq-err';
+    d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99999;background:#b91c1c;' +
+      'color:#fff;padding:12px 16px;font:14px/1.45 -apple-system,BlinkMacSystemFont,sans-serif;' +
+      'white-space:pre-wrap;box-shadow:0 2px 12px rgba(0,0,0,.3)';
+    d.style.cursor = 'pointer';
+    d.title = 'Cliquer pour masquer';
+    d.onclick = function () { d.remove(); };
+    document.body.appendChild(d);
+  }
+  d.textContent = '\u26a0 ' + msg;
+};
+addEventListener('error', function (e) { if (e.message) window.qfqError(e.message); });
+addEventListener('unhandledrejection', function (e) {
+  var r = e.reason;
+  window.qfqError((r && (r.message || r.code)) || String(r));
+});
+setTimeout(function () {
+  if (!window.qfqReady) window.qfqError(
+    "La page n'a pas démarré.\n\n1. Le fichier qfq-common.js est-il bien déposé À CÔTÉ des pages HTML, avec exactement ce nom (minuscules comprises) ?\n2. Les règles Firestore ont-elles été publiées dans la console Firebase ?");
+}, 5000);
+</script>
+
 <div class="wrap">
 
   <!-- ============ 1. CONNEXION ============ -->
@@ -503,6 +533,8 @@ function renderRes(){
     </div>`;
   }).join('');
 }
+
+window.qfqReady = true;
 </script>
 </body>
 </html>
